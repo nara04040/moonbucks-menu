@@ -66,9 +66,35 @@ import store from "./store/store.js";
 // - [ ] 중복되는 메뉴는 추가할 수 없다.
 
 const BASE_URL = "http://localhost:3000/api";
+
 const MenuApi = {
   async getAllMenuByCategory(category) {
     const response = await fetch(`${BASE_URL}/category/${category}/menu`);
+    return response.json();
+  },
+  async createMenu(category, name) {
+    const response = await fetch(`${BASE_URL}/category/${category}/menu`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) {
+      console.error("오류가 났어요!");
+    }
+  },
+  async updateMenu(category, name, menuId) {
+    const response = await fetch(`${BASE_URL}/category/${category}/menu/${menuId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) {
+      console.error("오류가 났어요!");
+    }
     return response.json();
   },
 };
@@ -93,7 +119,7 @@ function App() {
     const template = this.menu[this.currentCategory]
       .map((menuItem, index) => {
         return `
-          <li data-menu-id="${index}" class="menu-list-item d-flex items-center py-2">
+          <li data-menu-id="${menuItem.id}" class="menu-list-item d-flex items-center py-2">
           <span class="w-100 pl-2 menu-name ${menuItem.soldOut ? "sold-out" : ""}">${menuItem.name}</span>
           <button
           type="button"
@@ -131,32 +157,22 @@ function App() {
       alert("값을 입력해 주세요");
       return;
     }
-    const MenuName = $("#menu-name").value;
-
-    await fetch(`${BASE_URL}/category/${this.currentCategory}/menu`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name: MenuName }),
-    }).then((response) => {
-      return response.json();
-    });
-
+    const menuName = $("#menu-name").value;
+    await MenuApi.createMenu(this.currentCategory, menuName);
     this.menu[this.currentCategory] = await MenuApi.getAllMenuByCategory(this.currentCategory);
     render();
     $("#menu-name").value = "";
   };
 
-  const updateMenuName = (e) => {
+  const updateMenuName = async (e) => {
     const menuId = e.target.closest("li").dataset.menuId;
     const $menuName = e.target.closest("li").querySelector(".menu-name");
     const updatedMenuName = prompt("메뉴명을 수정하세요", $menuName.innerText);
-    if (updatedMenuName) {
-      this.menu[this.currentCategory][menuId].name = updatedMenuName;
-      store.setLocalStorage(this.menu);
-      render();
-    }
+    await MenuApi.updateMenu(this.currentCategory, updateMenuName, menuId);
+    this.menu[this.currentCategory] = await MenuApi.getAllMenuByCategory(this.currentCategory);
+    // this.menu[this.currentCategory][menuId].name = updatedMenuName;
+    // store.setLocalStorage(this.menu);
+    render();
   };
 
   const soldOutMenu = (e) => {
@@ -210,12 +226,13 @@ function App() {
       addMenuName();
     });
 
-    $("nav").addEventListener("click", (e) => {
+    $("nav").addEventListener("click", async (e) => {
       const isCategoryButton = e.target.classList.contains("cafe-category-name");
       if (isCategoryButton) {
         const categoryName = e.target.dataset.categoryName;
         this.currentCategory = categoryName;
         $("#category-title").innerText = `${e.target.innerText} 메뉴관리`;
+        this.menu[this.currentCategory] = await MenuApi.getAllMenuByCategory(this.currentCategory);
         render();
       }
     });
