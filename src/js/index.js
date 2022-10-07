@@ -1,3 +1,5 @@
+import { $ } from "./utils/dom.js";
+import store from "./store/store.js";
 /**
  * // step1 요구사항 구현을 위한 전략
 // TODO메뉴 추가
@@ -19,6 +21,7 @@
 
  */
 
+/*
 // step2 요구사항
 
 // TODO localStorage Read & Wright
@@ -44,10 +47,31 @@
 //  - [ ] 품절 버튼을 추가한다.
 //  - [ ] 품절 버튼을 클릭하면 localStorage에 상태값이 저장된다.
 //  - [ ] 클릭이벤트에서 가장 가까운 li태그의  class속성 값에 sold-out을 추가한다
+*/
 
-import { $ } from "./utils/dom.js";
-import store from "./store/store.js";
+// TODO 서버 요청 부분
+// - [x] 웹 서버를 띄운다.
+// - [ ] 서버에 새로운 메뉴명을 추가될 수 있도록 요청한다.
+// - [ ] 서버에 카테고리별 메뉴리스트를 불러온다
+// - [ ] 서버에 메뉴가 수정 될 수 있도록 요청한다.
+// - [ ] 서버에 메뉴의 품절상태를 토글될 수 있도록 한다.
+// - [ ] 서버에 메뉴가 삭제 될 수 있도록 요청한다
 
+// 리팩터링 부분
+// - [ ] localStorage에 저장하는 로직은 지운다.
+// - [ ] fetch 비동기 api를 사용하는 부분을 async await을 사용하여 구현한다.
+
+// TODO 사용자 경험
+// - [ ] API 통신이 실패하는 경우에 대해 사용자가 알 수 있게 alert으로 예외처리를 진행한다.
+// - [ ] 중복되는 메뉴는 추가할 수 없다.
+
+const BASE_URL = "http://localhost:3000/api";
+const MenuApi = {
+  async getAllMenuByCategory(category) {
+    const response = await fetch(`${BASE_URL}/category/${category}/menu`);
+    return response.json();
+  },
+};
 function App() {
   // 상태는 변하는 데이터, 이앱에서 변하는 것이 무엇인가 - 메뉴명
   this.menu = {
@@ -59,10 +83,8 @@ function App() {
   };
 
   this.currentCategory = "espresso";
-  this.init = () => {
-    if (store.getLocalStorage()) {
-      this.menu = store.getLocalStorage();
-    }
+  this.init = async () => {
+    this.menu[this.currentCategory] = await MenuApi.getAllMenuByCategory(this.currentCategory);
     render();
     initEventListeners();
   };
@@ -104,15 +126,24 @@ function App() {
     $(".menu-count").innerText = `총 ${menuCount}개`;
   };
 
-  const addMenuName = () => {
+  const addMenuName = async () => {
     if ($("#menu-name").value === "") {
       alert("값을 입력해 주세요");
       return;
     }
     const MenuName = $("#menu-name").value;
-    this.menu[this.currentCategory].push({ name: MenuName });
-    store.setLocalStorage(this.menu);
-    const template = this.menu;
+
+    await fetch(`${BASE_URL}/category/${this.currentCategory}/menu`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: MenuName }),
+    }).then((response) => {
+      return response.json();
+    });
+
+    this.menu[this.currentCategory] = await MenuApi.getAllMenuByCategory(this.currentCategory);
     render();
     $("#menu-name").value = "";
   };
